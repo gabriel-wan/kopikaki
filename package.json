@@ -16,7 +16,9 @@
     "check:memory": "tsx src/lib/memory.test.ts",
     "check:pwa": "tsx scripts/pwa.test.ts",
     "emulators": "firebase emulators:start --project kopikaki-local --import=.firebase-data --export-on-exit=.firebase-data",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "seed:production": "tsx scripts/seed-production.ts",
+    "check:seed-production": "tsx src/lib/production-seed.test.ts"
   },
   "dependencies": {
     "@google/genai": "2.18.0",

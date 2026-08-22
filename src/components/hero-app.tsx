@@ -24,6 +24,7 @@ import { AccountScreen } from "./account-screen";
 import { Brand } from "./brand";
 import { BottomNav, type Tab } from "./bottom-nav";
 import { CallScreen } from "./call-screen";
+import { ChatScreen } from "./chat-screen";
 import { HomeScreen } from "./home-screen";
 import { KakisScreen } from "./kakis-screen";
 import { MatchScreen } from "./match-screen";
@@ -40,6 +41,7 @@ export function HeroApp() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [meetup, setMeetup] = useState<Meetup | null>(null);
   const [kakis, setKakis] = useState<Candidate[]>([]);
+  const [chatWith, setChatWith] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +94,7 @@ export function HeroApp() {
             },
           ),
           onSnapshot(
-            collection(db, "kakis"),
+            collection(db, "users", user.uid, "kakis"),
             (snapshot) => {
               try {
                 setKakis(snapshot.docs.map((doc) => parseCandidate(doc.id, doc.data())));
@@ -190,7 +192,16 @@ export function HeroApp() {
 
   return (
     <div className="app-shell">
-      {!authReady ? <main className="screen auth-loading"><Brand /><p>Opening KopiKaki…</p></main> : !signedIn ? <AccountScreen /> : proposal ? (
+      {!authReady ? <main className="screen auth-loading"><Brand /><p>Opening KopiKaki…</p></main> : !signedIn ? <AccountScreen /> : chatWith ? (
+        <ChatScreen
+          kaki={chatWith}
+          onBack={() => setChatWith(null)}
+          onCall={() => {
+            setChatWith(null);
+            setTab("call");
+          }}
+        />
+      ) : proposal ? (
         <MatchScreen
           candidate={proposal.match}
           reason={proposal.reason}
@@ -204,7 +215,7 @@ export function HeroApp() {
       ) : tab === "call" ? (
         <CallScreen onBack={() => setTab("home")} onTranscript={preview} />
       ) : tab === "kakis" ? (
-        <KakisScreen kakis={kakis} loading={loading} />
+        <KakisScreen kakis={kakis} loading={loading} onCall={() => setTab("call")} onSelect={setChatWith} />
       ) : (
         <HomeScreen
           meetup={meetup}
@@ -214,12 +225,12 @@ export function HeroApp() {
           onLogout={logout}
         />
       )}
-      {signedIn && error && !proposal && (
+      {signedIn && error && !proposal && !chatWith && (
         <p className="global-error" role="alert">
           {error}
         </p>
       )}
-      {signedIn && !proposal && <BottomNav active={tab} onChange={setTab} />}
+      {signedIn && !proposal && !chatWith && <BottomNav active={tab} onChange={setTab} />}
     </div>
   );
 }

@@ -31,6 +31,11 @@ export type ForgetNoteArgs = {
   text: string;
 };
 
+export type UpdateKakiListArgs = {
+  name: string;
+  add: boolean;
+};
+
 // Unlike set_availability, a lookup doesn't have to name an activity or a time —
 // "who's free today, for anything" is a valid question. Only the date is required.
 export type FindAvailabilityArgs = {
@@ -45,7 +50,8 @@ export type MemoryOperation =
   | { operation: "remember_note"; args: RememberNoteArgs }
   | { operation: "forget_note"; args: ForgetNoteArgs }
   | { operation: "set_availability"; args: SetAvailabilityArgs }
-  | { operation: "find_availability"; args: FindAvailabilityArgs };
+  | { operation: "find_availability"; args: FindAvailabilityArgs }
+  | { operation: "update_kaki_list"; args: UpdateKakiListArgs };
 
 const noteKinds = new Set<MemoryNoteKind>(["preference", "constraint", "context"]);
 
@@ -171,6 +177,13 @@ export function parseMemoryOperation(value: unknown, now = new Date()): MemoryOp
   }
   if (data.operation === "find_availability") {
     return { operation: "find_availability", args: parseFindAvailability(args, now) };
+  }
+  if (data.operation === "update_kaki_list") {
+    if (typeof args.add !== "boolean") throw new Error("Add flag is invalid.");
+    return {
+      operation: "update_kaki_list",
+      args: { name: textValue(args.name, "Kaki name", 80), add: args.add },
+    };
   }
   throw new Error("Memory operation is invalid.");
 }

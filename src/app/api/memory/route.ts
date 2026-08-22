@@ -2,6 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 
 import { routeError } from "@/lib/api-error";
+import { parseCandidate } from "@/lib/domain";
 import { adminDb, loadUserProfile, requireUser } from "@/lib/firebase-admin";
 import {
   appendMemoryNote,
@@ -71,6 +72,69 @@ export async function POST(request: Request) {
         updatedAt: FieldValue.serverTimestamp(),
       });
       return NextResponse.json({ saved: true });
+    }
+
+    if (op.operation === "update_kaki_list") {
+      const kakisRef = adminDb.collection("users").doc(userId).collection("kakis");
+      const needle = op.args.name.toLocaleLowerCase("en-SG");
+
+      if (!op.args.add) {
+        const existing = await kakisRef.get();
+        const match = existing.docs.find(
+          (doc) => (doc.data().name as string ?? "").toLocaleLowerCase("en-SG") === needle,
+        );
+        if (!match) return NextResponse.json({ removed: false });
+        await match.ref.delete();
+        return NextResponse.json({ removed: true });
+      }
+
+      const matchesName = (name: unknown) =>
+        typeof name === "string" && name.toLocaleLowerCase("en-SG") === needle;
+
+      const pool = await adminDb.collection("kakis").get();
+      const foundKaki = pool.docs.find(
+        (doc) => doc.id !== userId && doc.data().kind === "person" && matchesName(doc.data().name),
+      );
+
+      let candidate;
+      let hasAccount: boolean;
+      if (foundKaki) {
+        candidate = parseCandidate(foundKaki.id, foundKaki.data());
+        // A "kakis" entry can be a real caller or a seeded placeholder — check which.
+        hasAccount = (await adminDb.collection("users").doc(candidate.id).get()).exists;
+      } else {
+        // Not every registered KopiKaki user has made a match request yet (that's the only
+        // thing that adds them to "kakis") — search real accounts too.
+        const users = await adminDb.collection("users").get();
+        const foundUser = users.docs.find((doc) => {
+          if (doc.id === userId) return false;
+          const data = doc.data();
+          return matchesName(data.preferredName) || matchesName(data.name) || matchesName(data.loginName);
+        });
+        if (!foundUser) return NextResponse.json({ added: false, error: "Could not find that kaki." });
+        const data = foundUser.data();
+        candidate = parseCandidate(foundUser.id, {
+          kind: "person",
+          name: data.preferredName ?? data.name,
+          activities: data.activities ?? [],
+          times: data.times ?? [],
+          neighborhood: data.neighborhood ?? "Not shared yet",
+          languages: data.languages ?? [],
+        });
+        hasAccount = true;
+      }
+      await kakisRef.doc(candidate.id).set({
+        kind: candidate.kind,
+        name: candidate.name,
+        activities: candidate.activities,
+        times: candidate.times,
+        neighborhood: candidate.neighborhood,
+        languages: candidate.languages,
+        hasAccount,
+        ...(candidate.avatarUrl ? { avatarUrl: candidate.avatarUrl } : {}),
+        addedAt: FieldValue.serverTimestamp(),
+      });
+      return NextResponse.json({ added: true });
     }
 
     // find_availability — date is the only field always present (activity/time are optional

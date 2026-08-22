@@ -77,6 +77,20 @@ const forgetOperation = parseMemoryOperation({
 assert.equal(forgetOperation.operation, "forget_note");
 if (forgetOperation.operation === "forget_note") assert.equal(forgetOperation.args.text, "bad knees");
 
+const addKaki = parseMemoryOperation({
+  operation: "update_kaki_list",
+  args: { name: "  Mrs Tan  ", add: true },
+});
+assert.equal(addKaki.operation, "update_kaki_list");
+if (addKaki.operation === "update_kaki_list") {
+  assert.equal(addKaki.args.name, "Mrs Tan");
+  assert.equal(addKaki.args.add, true);
+}
+assert.throws(() => parseMemoryOperation({
+  operation: "update_kaki_list",
+  args: { name: "Mrs Tan" },
+}), /add/i);
+
 assert.equal(windowsOverlap(900, 960, 930, 990), true);
 assert.equal(windowsOverlap(900, 960, 960, 1020), false);
 assert.equal(

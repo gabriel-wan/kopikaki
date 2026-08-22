@@ -15,20 +15,27 @@ function encodePcm(samples: Float32Array, sourceRate: number): string {
 
 export async function streamMicrophone(session: Session) {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
-  const context = new AudioContext();
-  const source = context.createMediaStreamSource(stream);
-  // ponytail: dependency-free demo audio; replace with AudioWorklet only if profiling shows glitches.
-  const processor = context.createScriptProcessor(2048, 1, 1);
-  processor.onaudioprocess = (event) => session.sendRealtimeInput({ audio: { data: encodePcm(event.inputBuffer.getChannelData(0), context.sampleRate), mimeType: "audio/pcm;rate=16000" } });
-  source.connect(processor);
-  processor.connect(context.destination);
-  return async () => {
-    processor.disconnect();
-    source.disconnect();
+  let context: AudioContext | null = null;
+  try {
+    context = new AudioContext();
+    const source = context.createMediaStreamSource(stream);
+    // ponytail: dependency-free demo audio; replace with AudioWorklet only if profiling shows glitches.
+    const processor = context.createScriptProcessor(2048, 1, 1);
+    processor.onaudioprocess = (event) => session.sendRealtimeInput({ audio: { data: encodePcm(event.inputBuffer.getChannelData(0), context!.sampleRate), mimeType: "audio/pcm;rate=16000" } });
+    source.connect(processor);
+    processor.connect(context.destination);
+    return async () => {
+      processor.disconnect();
+      source.disconnect();
+      stream.getTracks().forEach((track) => track.stop());
+      session.sendRealtimeInput({ audioStreamEnd: true });
+      if (context?.state !== "closed") await context?.close();
+    };
+  } catch (error) {
     stream.getTracks().forEach((track) => track.stop());
-    session.sendRealtimeInput({ audioStreamEnd: true });
-    await context.close();
-  };
+    if (context?.state !== "closed") await context?.close();
+    throw error;
+  }
 }
 
 export function createAudioPlayer() {
@@ -49,6 +56,8 @@ export function createAudioPlayer() {
       source.start(nextStart);
       nextStart += buffer.duration;
     },
-    close: () => context.close(),
+    close: async () => {
+      if (context.state !== "closed") await context.close();
+    },
   };
 }

@@ -22,6 +22,7 @@ const callExperience = renderToStaticMarkup(
   createElement(CallScreen, {
     onBack: () => undefined,
     onTranscript: async () => undefined,
+    onVoiceConfirmed: () => undefined,
   }),
 );
 

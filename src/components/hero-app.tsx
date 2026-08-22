@@ -2,8 +2,6 @@
 
 import {
   collection,
-  doc,
-  getDoc,
   limit,
   onSnapshot,
   orderBy,
@@ -16,7 +14,6 @@ import { useEffect, useState } from "react";
 
 import {
   parseCandidate,
-  parseUserProfile,
   type Candidate,
   type MatchIntent,
   type MatchTier,
@@ -43,7 +40,6 @@ export function HeroApp() {
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [meetup, setMeetup] = useState<Meetup | null>(null);
   const [kakis, setKakis] = useState<Candidate[]>([]);
-  const [name, setName] = useState("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -72,14 +68,6 @@ export function HeroApp() {
       void Promise.resolve(user)
       .then((user) => {
         if (!user || disposed) return;
-        void getDoc(doc(db, "users", user.uid)).then((snapshot) => {
-          if (disposed || !snapshot.exists()) return;
-          try {
-            setName(parseUserProfile(snapshot.data()).name);
-          } catch {
-            // Keep the generic greeting if the profile doc is malformed.
-          }
-        });
         const meetupQuery = query(
           collection(db, "meetups"),
           where("userId", "==", user.uid),
@@ -219,9 +207,7 @@ export function HeroApp() {
         <HomeScreen
           meetup={meetup}
           loading={loading}
-          name={name}
           onCall={() => setTab("call")}
-          onKakis={() => setTab("kakis")}
           onLogout={logout}
         />
       )}

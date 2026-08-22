@@ -2,6 +2,7 @@
 
 import { GoogleGenAI, Modality, type FunctionCall, type Session } from "@google/genai";
 import { ArrowLeft, Mic, Search, Square } from "lucide-react";
+import Image from "next/image";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { type Candidate, type MatchIntent, type MatchTier, type Meetup } from "@/lib/domain";
@@ -260,7 +261,7 @@ export function CallScreen({
         <p className="eyebrow">Calling KopiKaki</p>
         <h1>{heading}</h1>
         <div className={status === "listening" ? "voice-orb listening" : "voice-orb"} aria-hidden="true">
-          <Brand compact />
+          <Image className="voice-character" src="/kopikaki-voice.png" alt="" width={172} height={172} priority />
         </div>
         <button
           className={status === "listening" ? "voice-button stop" : "voice-button"}

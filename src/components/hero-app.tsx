@@ -211,6 +211,16 @@ export function HeroApp() {
     }
   }
 
+  function showConfirmedMeetup(meetup: Meetup, joined: boolean) {
+    setMeetups((existing) => [
+      meetup,
+      ...existing.filter((item) => item.id !== meetup.id),
+    ]);
+    setProposal(null);
+    setTab("home");
+    setView({ kind: "confirmed", meetup, joined });
+  }
+
   async function logout() {
     setError("");
     try {
@@ -273,7 +283,11 @@ export function HeroApp() {
           }}
         />
       ) : tab === "call" ? (
-        <CallScreen onBack={() => setTab("home")} onTranscript={preview} />
+        <CallScreen
+          onBack={() => setTab("home")}
+          onTranscript={preview}
+          onVoiceConfirmed={({ meetup, joined }) => showConfirmedMeetup(meetup, joined)}
+        />
       ) : tab === "schedule" ? (
         <ScheduleScreen
           meetups={meetups}

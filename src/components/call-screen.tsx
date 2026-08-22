@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type Candidate, type MatchIntent, type MatchTier, type Meetup } from "@/lib/domain";
 import { apiPost } from "@/lib/firebase-client";
 import { createAudioPlayer, streamMicrophone } from "@/lib/live-audio";
+import { voiceConfirmation, type VoiceConfirmation } from "@/lib/voice-confirmation";
 import {
   CONFIRM_KAKI_MATCH,
   FIND_AVAILABILITY,
@@ -35,9 +36,11 @@ type CallStatus = "ready" | "connecting" | "listening" | "thinking";
 export function CallScreen({
   onBack,
   onTranscript,
+  onVoiceConfirmed,
 }: {
   onBack: () => void;
   onTranscript: (transcript: string) => Promise<void>;
+  onVoiceConfirmed: (confirmation: VoiceConfirmation) => void;
 }) {
   const [transcript, setTranscript] = useState("");
   const [status, setStatus] = useState<CallStatus>("ready");
@@ -140,6 +143,7 @@ export function CallScreen({
           },
         }],
       });
+      onVoiceConfirmed(voiceConfirmation(result.meetup, result.joined));
     } catch (cause) {
       session.sendToolResponse({
         functionResponses: [{

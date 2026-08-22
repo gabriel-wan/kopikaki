@@ -4,6 +4,7 @@ import {
   appendMemoryNote,
   availabilityId,
   parseMemoryOperation,
+  removeMemoryNote,
   resolveSingaporeDate,
   windowsOverlap,
   type MemoryNote,
@@ -43,6 +44,39 @@ assert.throws(() => parseMemoryOperation({
   args: { activity: "badminton", date: "today", startTime: "16:00", endTime: "15:00" },
 }, singaporeLateNight), /after/i);
 
+// Open-ended lookup: no activity, no time — must not require them (this is the bug this fixes).
+const openEnded = parseMemoryOperation({
+  operation: "find_availability",
+  args: { date: "today" },
+}, singaporeLateNight);
+assert.equal(openEnded.operation, "find_availability");
+if (openEnded.operation === "find_availability") {
+  assert.equal(openEnded.args.localDate, "2026-08-22");
+  assert.equal(openEnded.args.activityKey, undefined);
+  assert.equal(openEnded.args.startMinute, undefined);
+}
+
+const activityOnly = parseMemoryOperation({
+  operation: "find_availability",
+  args: { date: "today", activity: "Badminton" },
+}, singaporeLateNight);
+if (activityOnly.operation === "find_availability") {
+  assert.equal(activityOnly.args.activityKey, "badminton");
+  assert.equal(activityOnly.args.startMinute, undefined);
+}
+
+assert.throws(() => parseMemoryOperation({
+  operation: "find_availability",
+  args: { date: "today", startTime: "15:00" },
+}, singaporeLateNight), /start and end/i);
+
+const forgetOperation = parseMemoryOperation({
+  operation: "forget_note",
+  args: { text: "bad knees" },
+});
+assert.equal(forgetOperation.operation, "forget_note");
+if (forgetOperation.operation === "forget_note") assert.equal(forgetOperation.args.text, "bad knees");
+
 assert.equal(windowsOverlap(900, 960, 930, 990), true);
 assert.equal(windowsOverlap(900, 960, 960, 1020), false);
 assert.equal(
@@ -72,5 +106,9 @@ assert.deepEqual(appendMemoryNote(appended, {
   kind: "preference",
   createdAt: "2026-08-22T01:00:00.000Z",
 }), appended);
+
+const withKneeNote = appendMemoryNote([], { text: "Bad knees, avoid stairs", kind: "constraint", createdAt: "2026-08-22T00:00:00.000Z" });
+assert.equal(removeMemoryNote(withKneeNote, "knees").length, 0);
+assert.equal(removeMemoryNote(withKneeNote, "something else").length, 1);
 
 console.log("memory helpers passed");

@@ -9,7 +9,7 @@ import {
   type MatchIntent,
   type Meetup,
 } from "@/lib/domain";
-import { adminDb, loadUserProfile, requireUser } from "@/lib/firebase-admin";
+import { adminDb, ensureUserProfile, requireUser } from "@/lib/firebase-admin";
 import { capitalize, meetupTime } from "@/lib/format";
 import { geminiClient, MATCH_MODEL } from "@/lib/gemini";
 import { parseIntentFallback } from "@/lib/intent";
@@ -28,7 +28,7 @@ async function candidates(collectionName: "kakis" | "groups" | "activities") {
 }
 
 async function requireUserName(userId: string): Promise<string> {
-  const profile = await loadUserProfile(userId);
+  const profile = await ensureUserProfile(userId);
   if (!profile) throw new Error("Your profile is missing. Please reseed the demo data.");
   return profile.name;
 }

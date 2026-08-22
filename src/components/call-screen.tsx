@@ -11,11 +11,16 @@ import { createAudioPlayer, streamMicrophone } from "@/lib/live-audio";
 import {
   CONFIRM_KAKI_MATCH,
   FIND_AVAILABILITY,
+  FORGET_NOTE,
   LIVE_TOOLS,
+  MY_STATUS,
   PROPOSE_KAKI_MATCH,
   REMEMBER_NOTE,
   SET_AVAILABILITY,
+  UPDATE_PROFILE,
 } from "@/lib/live-tools";
+
+const MEMORY_TOOLS = new Set([REMEMBER_NOTE, FORGET_NOTE, SET_AVAILABILITY, FIND_AVAILABILITY]);
 import { Brand } from "./brand";
 
 type CallStatus = "ready" | "connecting" | "listening" | "thinking";
@@ -126,12 +131,9 @@ export function CallScreen({
     }
   }
 
-  async function handleMemory(call: FunctionCall, session: Session) {
+  async function handleServerTool(call: FunctionCall, session: Session, path: string, body: object) {
     try {
-      const result = await apiPost<Record<string, unknown>>("/api/memory", {
-        operation: call.name,
-        args: call.args ?? {},
-      });
+      const result = await apiPost<Record<string, unknown>>(path, body);
       session.sendToolResponse({
         functionResponses: [{ id: call.id, name: call.name, response: result }],
       });
@@ -140,7 +142,7 @@ export function CallScreen({
         functionResponses: [{
           id: call.id,
           name: call.name,
-          response: { error: cause instanceof Error ? cause.message : "Could not update memory." },
+          response: { error: cause instanceof Error ? cause.message : "Something went wrong. Please try again." },
         }],
       });
     }
@@ -183,8 +185,12 @@ export function CallScreen({
               for (const call of message.toolCall?.functionCalls ?? []) {
                 if (call.name === PROPOSE_KAKI_MATCH) void handlePropose(call, liveSession);
                 else if (call.name === CONFIRM_KAKI_MATCH) void handleConfirm(call, liveSession);
-                else if (call.name === REMEMBER_NOTE || call.name === SET_AVAILABILITY || call.name === FIND_AVAILABILITY) {
-                  void handleMemory(call, liveSession);
+                else if (call.name && MEMORY_TOOLS.has(call.name)) {
+                  void handleServerTool(call, liveSession, "/api/memory", { operation: call.name, args: call.args ?? {} });
+                } else if (call.name === UPDATE_PROFILE) {
+                  void handleServerTool(call, liveSession, "/api/profile", { ...call.args });
+                } else if (call.name === MY_STATUS) {
+                  void handleServerTool(call, liveSession, "/api/me", {});
                 }
               }
             }

@@ -7,7 +7,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { type Candidate, type MatchIntent, type MatchTier, type Meetup } from "@/lib/domain";
 import { apiPost } from "@/lib/firebase-client";
 import { createAudioPlayer, streamMicrophone } from "@/lib/live-audio";
-import { CONFIRM_KAKI_MATCH, LIVE_TOOLS, PROPOSE_KAKI_MATCH } from "@/lib/live-tools";
+import {
+  CONFIRM_KAKI_MATCH,
+  FIND_AVAILABILITY,
+  LIVE_TOOLS,
+  PROPOSE_KAKI_MATCH,
+  REMEMBER_NOTE,
+  SET_AVAILABILITY,
+} from "@/lib/live-tools";
 import { Brand } from "./brand";
 
 type CallStatus = "ready" | "connecting" | "listening" | "thinking";
@@ -118,6 +125,26 @@ export function CallScreen({
     }
   }
 
+  async function handleMemory(call: FunctionCall, session: Session) {
+    try {
+      const result = await apiPost<Record<string, unknown>>("/api/memory", {
+        operation: call.name,
+        args: call.args ?? {},
+      });
+      session.sendToolResponse({
+        functionResponses: [{ id: call.id, name: call.name, response: result }],
+      });
+    } catch (cause) {
+      session.sendToolResponse({
+        functionResponses: [{
+          id: call.id,
+          name: call.name,
+          response: { error: cause instanceof Error ? cause.message : "Could not update memory." },
+        }],
+      });
+    }
+  }
+
   async function startVoice() {
     await stopVoice(false);
     setError("");
@@ -155,6 +182,9 @@ export function CallScreen({
               for (const call of message.toolCall?.functionCalls ?? []) {
                 if (call.name === PROPOSE_KAKI_MATCH) void handlePropose(call, liveSession);
                 else if (call.name === CONFIRM_KAKI_MATCH) void handleConfirm(call, liveSession);
+                else if (call.name === REMEMBER_NOTE || call.name === SET_AVAILABILITY || call.name === FIND_AVAILABILITY) {
+                  void handleMemory(call, liveSession);
+                }
               }
             }
             if (pendingHangupRef.current && message.serverContent?.turnComplete) {

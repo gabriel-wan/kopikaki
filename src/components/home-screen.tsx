@@ -1,13 +1,8 @@
 import { LogOut, Phone, Users } from "lucide-react";
 import type { Meetup } from "@/lib/domain";
-import { homeGreeting } from "@/lib/greeting";
 import { Brand } from "./brand";
 import { MeetupCard } from "./meetup-card";
 
-function greeting(hour: number) {
-  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-}
-
-export function HomeScreen({ meetup, loading, name, onCall, onKakis, onLogout }: { meetup: Meetup | null; loading: boolean; name: string; onCall: () => void; onKakis: () => void; onLogout: () => void }) {
-  return <main className="screen home-screen"><header className="topbar"><Brand /><button className="logout-button" onClick={onLogout}><LogOut size={20} aria-hidden="true" />Log out</button></header><section className="greeting"><p className="eyebrow">{greeting(new Date().getHours())}</p><h1>{homeGreeting(name)}</h1><p>Let’s find someone to do something fun today.</p></section><button className="call-card" onClick={onCall}><span className="call-icon"><Phone size={35} fill="currentColor" aria-hidden="true" /></span><span><strong>Call KopiKaki</strong><small>Talk to your social concierge</small></span></button><section className="section-block" aria-live="polite"><div className="section-heading"><h2>Your Next Meetup</h2></div>{loading ? <div className="empty-card">Checking your meetups…</div> : meetup ? <MeetupCard meetup={meetup} /> : <div className="empty-card"><Users size={28} aria-hidden="true" /><strong>No meetup yet</strong><span>Call KopiKaki and we’ll find someone nearby.</span></div>}</section><button className="secondary-button" onClick={onKakis}><Users size={23} aria-hidden="true" />See My Kakis</button></main>;
+export function HomeScreen({ meetup, loading, onCall, onLogout }: { meetup: Meetup | null; loading: boolean; onCall: () => void; onLogout: () => void }) {
+  return <main className="screen home-screen"><header className="topbar"><Brand /><button className="logout-button" onClick={onLogout}><LogOut size={20} aria-hidden="true" />Log out</button></header><section className="greeting"><h1 className="greeting-title">Hello!</h1><p>Let’s find someone to do something fun today.</p></section><button className="call-card" onClick={onCall}><span className="call-icon"><Phone size={35} fill="currentColor" aria-hidden="true" /></span><span className="call-copy"><strong>Call KopiKaki</strong></span></button><section className="meetup-section" aria-live="polite">{loading ? <div className="meetup-loading" role="status">Checking your meetups…</div> : meetup ? <MeetupCard meetup={meetup} /> : <div className="meetup-empty-state"><Users className="meetup-empty-icon" size={88} strokeWidth={1.7} aria-hidden="true" /><h2>Find a meetup near you</h2><button className="meetup-discover-button" onClick={onCall}>Find a meetup</button></div>}</section></main>;
 }

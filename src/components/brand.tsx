@@ -1,5 +1,6 @@
-import { Coffee } from "lucide-react";
+import Image from "next/image";
 
 export function Brand({ compact = false }: { compact?: boolean }) {
-  return <div className="brand" aria-label="KopiKaki"><span className="brand-mark" aria-hidden="true"><Coffee size={compact ? 20 : 25} strokeWidth={2.5} /></span><span className={compact ? "brand-name compact" : "brand-name"}>KopiKaki</span></div>;
+  const size = compact ? 54 : 76;
+  return <Image className={compact ? "brand-image compact" : "brand-image"} src="/kopikaki-logo.png" alt="KopiKaki" width={size} height={size} priority />;
 }

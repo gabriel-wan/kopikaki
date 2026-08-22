@@ -13,15 +13,17 @@ button:disabled { cursor: wait; opacity: .58; }
 .topbar { min-height: 78px; display: flex; align-items: center; justify-content: space-between; }
 .logout-button { display: inline-flex; min-height: 44px; align-items: center; gap: 6px; padding: 8px 10px; border: 0; border-radius: 10px; color: var(--red-dark); background: transparent; font-size: 15px; font-weight: 800; }
 .brand-image { display: block; width: 76px; height: 76px; border-radius: 18px; object-fit: cover; }
+.brand-wordmark { display: block; width: 170px; height: 57px; object-fit: contain; object-position: left center; }
 .brand-image.compact { width: 54px; height: 54px; border-radius: 14px; }
 .eyebrow { margin: 0 0 5px; color: var(--muted); font-size: 14px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 h1, h2, h3, p { margin-top: 0; } h1 { margin-bottom: 8px; font-size: clamp(30px, 8vw, 40px); line-height: 1.08; letter-spacing: -.04em; } h2 { font-size: 21px; } h3 { margin-bottom: 9px; font-size: 20px; line-height: 1.25; }
-.greeting { padding: 24px 2px 28px; }.greeting-title { margin-bottom: 8px; font-size: clamp(27px, 7vw, 32px); font-weight: 500; line-height: 1.18; letter-spacing: -.025em; }.greeting p:last-child, .page-title p:last-child { max-width: 32ch; color: var(--muted); line-height: 1.45; }
-.call-card { display: flex; width: 100%; min-height: 122px; align-items: center; gap: 27px; padding: 27px 26px; border: 0; border-radius: 22px; color: #fff; text-align: left; background: linear-gradient(135deg, #f24a3f, var(--red)); box-shadow: 0 11px 24px #e62d2430; }
+.greeting { padding: 24px 2px 28px; }.greeting-title { display: flex; flex-direction: column; margin-bottom: 12px; font-size: clamp(27px, 7vw, 32px); font-weight: 700; line-height: 1.18; letter-spacing: -.025em; }.greeting p:last-child, .page-title p:last-child { max-width: 32ch; color: var(--muted); line-height: 1.45; }.greeting p span { display: block; }
+.call-card { display: flex; width: 100%; min-height: 0; align-items: center; justify-content: flex-start; gap: 16px; margin-inline: 0; padding: 20px 24px; border: 0; border-radius: 24px; color: #fff; text-align: left; background: linear-gradient(135deg, #f24a3f, var(--red)); box-shadow: 0 11px 24px #e62d2430; }
 .call-card:active, .primary-button:active, .voice-button:active { background: var(--red-dark); }
-.call-card strong { display: block; font-size: 24px; line-height: 1.25; }.call-copy { min-width: 0; }
-.call-icon { display: grid; flex: 0 0 68px; width: 68px; height: 68px; place-items: center; border-radius: 50%; color: var(--red); background: #fff; }
-.meetup-section { margin-top: 42px; }
+.call-content { display: inline-flex; min-width: 0; align-items: center; gap: 16px; }.call-card strong { display: block; font-size: 22px; line-height: 1.2; }.call-copy { display: flex; min-width: 0; width: auto; max-width: 180px; flex: 0 1 auto; flex-direction: column; gap: 4px; }.call-copy span { font-size: 14px; line-height: 1.25; }
+.call-icon { display: grid; flex: 0 0 78px; width: 78px; height: 78px; place-items: center; border-radius: 50%; color: var(--red); background: #fff; }
+.meetup-section { margin-top: 16px; }
+.next-meetup-image { display: block; width: 100%; height: auto; border-radius: 20px; }
 .meetup-loading { padding: 32px 0; color: var(--muted); text-align: center; }
 .meetup-empty-state { display: flex; min-height: 250px; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 28px 12px 20px; text-align: center; }
 .meetup-empty-icon { color: #c9beba; }
@@ -98,5 +100,5 @@ h1, h2, h3, p { margin-top: 0; } h1 { margin-bottom: 8px; font-size: clamp(30px,
 .auth-loading { display: grid; min-height: 100dvh; align-content: center; justify-items: center; gap: 24px; color: var(--muted); font-weight: 700; }
 @keyframes breathe { 50% { transform: scale(1.04); box-shadow: 0 0 0 23px #ffe2dc, 0 0 0 45px #fff2ef; } }
 @media (min-width: 560px) { .app-shell { max-width: 520px; min-height: 100dvh; box-shadow: 0 0 42px #3c211221; }.bottom-nav { right: 50%; left: auto; width: 520px; transform: translateX(50%); padding-inline: 12px; } }
-@media (max-width: 370px) { body { font-size: 17px; }.screen { padding-inline: 15px; }.brand-image { width: 68px; height: 68px; }.call-card { gap: 20px; padding-inline: 20px; }.meetup-card { grid-template-columns: 64px 1fr; }.voice-orb { width: 180px; height: 180px; }.voice-character { width: 152px; height: 152px; } }
+@media (max-width: 370px) { body { font-size: 17px; }.screen { padding-inline: 15px; }.brand-image { width: 68px; height: 68px; }.brand-wordmark { width: 150px; height: 50px; }.call-card { gap: 16px; padding-inline: 16px; }.call-content { gap: 16px; }.call-icon { flex-basis: 72px; width: 72px; height: 72px; }.call-card strong { font-size: 20px; }.call-copy { max-width: 165px; }.call-copy span { font-size: 14px; }.meetup-card { grid-template-columns: 64px 1fr; }.voice-orb { width: 180px; height: 180px; }.voice-character { width: 152px; height: 152px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }

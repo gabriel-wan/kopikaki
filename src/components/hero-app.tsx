@@ -50,12 +50,15 @@ export function HeroApp() {
   const [meetups, setMeetups] = useState<Meetup[]>([]);
   const [windows, setWindows] = useState<FreeWindow[]>([]);
   const [view, setView] = useState<MeetupView | null>(null);
-  const [userName, setUserName] = useState("");
+  // The greeting uses the login name (userName); this is the profile name the server
+  // writes into participantNames, so the detail screen can tell which one is you.
+  const [profileName, setProfileName] = useState("");
   const [kakis, setKakis] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [userName, setUserName] = useState("");
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
@@ -70,6 +73,7 @@ export function HeroApp() {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       subscriptions.splice(0).forEach((unsubscribe) => unsubscribe());
       setSignedIn(Boolean(user));
+      setUserName(user?.displayName ?? "");
       setAuthReady(true);
       if (!user) {
         setLoading(false);
@@ -89,7 +93,7 @@ export function HeroApp() {
         subscriptions.push(
           onSnapshot(doc(db, "users", user.uid), (snapshot) => {
             const profile = snapshot.data();
-            setUserName(((profile?.preferredName ?? profile?.name) as string | undefined) ?? "");
+            setProfileName(((profile?.preferredName ?? profile?.name) as string | undefined) ?? "");
           }),
           onSnapshot(
             meetupQuery,
@@ -249,7 +253,7 @@ export function HeroApp() {
       ) : openView?.kind === "detail" ? (
         <MeetupDetailScreen
           meetup={openView.meetup}
-          currentUserName={userName}
+          currentUserName={profileName}
           onBack={() => setView(null)}
           onCall={() => {
             setView(null);
@@ -272,6 +276,7 @@ export function HeroApp() {
         <HomeScreen
           meetup={nextMeetup(meetups, resolveSingaporeDate("today"))}
           loading={loading}
+          userName={userName}
           onCall={() => setTab("call")}
           onLogout={logout}
           onOpenMeetup={openMeetup}

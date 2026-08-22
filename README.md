@@ -55,6 +55,20 @@ npm run build
 
 `check:matcher` fails if the People → Groups → Activities fallback contract changes — it guards the one piece of logic the whole demo depends on.
 
+## Shared demo deployment
+
+Firebase App Hosting deploys this Next.js app from `main`. The Firebase Web App values are saved in the App Hosting backend's **Settings → Environment** page, not committed to this repo:
+
+```text
+NEXT_PUBLIC_FIREBASE_PROJECT_ID
+NEXT_PUBLIC_FIREBASE_API_KEY
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+NEXT_PUBLIC_FIREBASE_APP_ID
+FIREBASE_PROJECT_ID
+```
+
+`GEMINI_API_KEY` is a Cloud Secret Manager secret referenced by `apphosting.yaml`. Create it once with `firebase apphosting:secrets:set GEMINI_API_KEY --project kopikakis-cc6d5`, then trigger a rollout. Do not add it to App Hosting's plaintext environment form or commit it.
+
 ## Staged / dropped from v1
 
 Real phone OTP and Firebase App Hosting need a real Firebase project on the Blaze plan — staged after the seeded hero flow works. Dropped for v1: SOS/trusted contacts, onboarding carousel, accessibility settings, notifications, profiles, activity browsing, group chat.

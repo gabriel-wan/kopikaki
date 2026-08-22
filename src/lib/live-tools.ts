@@ -2,6 +2,7 @@ import { Type, type ToolListUnion } from "@google/genai";
 
 export const PROPOSE_KAKI_MATCH = "propose_kaki_match";
 export const CONFIRM_KAKI_MATCH = "confirm_kaki_match";
+export const UPDATE_KAKI_LIST = "update_kaki_list";
 export const REMEMBER_NOTE = "remember_note";
 export const FORGET_NOTE = "forget_note";
 export const SET_AVAILABILITY = "set_availability";
@@ -29,6 +30,18 @@ export const LIVE_TOOLS: ToolListUnion = [{
       name: CONFIRM_KAKI_MATCH,
       description: "Call only after the caller gives a clear verbal yes to the proposed match. Books the meetup, or adds the caller to the existing meetup they were just offered.",
       parameters: { type: Type.OBJECT, properties: {} },
+    },
+    {
+      name: UPDATE_KAKI_LIST,
+      description: "Call with add:true only after the caller gives a clear yes to adding someone as a kaki (friend). Call with add:false only when the caller explicitly asks to remove someone already on their kaki list. Never call this just because a match was proposed — only on the caller's explicit answer.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING, description: "The kaki's name, as said by the caller, e.g. 'Mrs Tan'." },
+          add: { type: Type.BOOLEAN, description: "true to add them as a kaki, false to remove them." },
+        },
+        required: ["name", "add"],
+      },
     },
     {
       name: REMEMBER_NOTE,

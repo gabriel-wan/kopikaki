@@ -22,6 +22,7 @@ export type Candidate = {
   avatarUrl?: string;
   members?: string[];
   venue?: string;
+  hasAccount?: boolean;
 };
 
 export type MatchResult = {
@@ -143,12 +144,15 @@ export function parseCandidate(id: string, value: unknown): Candidate {
     id,
     kind,
     name: nonEmptyString(data.name, "Candidate name"),
-    activities: stringList(data.activities, "Candidate activities"),
-    times: stringList(data.times, "Candidate times"),
+    // A kaki added straight from a bare user account may not have stated activities,
+    // times, or languages yet — empty is valid, it just never matches the matcher.
+    activities: stringList(data.activities, "Candidate activities", true),
+    times: stringList(data.times, "Candidate times", true),
     neighborhood: nonEmptyString(data.neighborhood, "Candidate neighborhood"),
-    languages: stringList(data.languages, "Candidate languages"),
+    languages: stringList(data.languages, "Candidate languages", true),
     ...(typeof data.avatarUrl === "string" && data.avatarUrl.trim() ? { avatarUrl: data.avatarUrl.trim() } : {}),
     ...(data.members === undefined ? {} : { members: stringList(data.members, "Candidate members", true) }),
     ...(typeof data.venue === "string" && data.venue.trim() ? { venue: data.venue.trim() } : {}),
+    ...(typeof data.hasAccount === "boolean" ? { hasAccount: data.hasAccount } : {}),
   };
 }

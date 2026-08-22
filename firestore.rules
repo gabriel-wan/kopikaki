@@ -4,6 +4,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null && request.auth.uid == userId;
       allow write: if false;
+
+      match /kakis/{kakiId} {
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow write: if false;
+      }
     }
 
     // Readable by the caller who booked it and by everyone who has since joined.
@@ -33,6 +38,17 @@ service cloud.firestore {
     match /availability/{availabilityId} {
       allow read: if request.auth != null;
       allow write: if false;
+    }
+
+    match /chats/{chatId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      allow write: if false;
+
+      match /messages/{messageId} {
+        allow read: if request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        allow write: if false;
+      }
     }
   }
 }

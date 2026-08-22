@@ -27,6 +27,7 @@ import { AccountScreen } from "./account-screen";
 import { Brand } from "./brand";
 import { BottomNav, type Tab } from "./bottom-nav";
 import { CallScreen } from "./call-screen";
+import { ChatScreen } from "./chat-screen";
 import { HomeScreen } from "./home-screen";
 import { KakisScreen } from "./kakis-screen";
 import { MatchFoundScreen } from "./match-found-screen";
@@ -54,6 +55,7 @@ export function HeroApp() {
   // writes into participantNames, so the detail screen can tell which one is you.
   const [profileName, setProfileName] = useState("");
   const [kakis, setKakis] = useState<Candidate[]>([]);
+  const [chatWith, setChatWith] = useState<Candidate | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -118,7 +120,7 @@ export function HeroApp() {
             (cause) => setError(cause.message),
           ),
           onSnapshot(
-            collection(db, "kakis"),
+            collection(db, "users", user.uid, "kakis"),
             (snapshot) => {
               try {
                 setKakis(snapshot.docs.map((doc) => parseCandidate(doc.id, doc.data())));
@@ -228,11 +230,21 @@ export function HeroApp() {
   const openView = view
     ? { ...view, meetup: meetups.find((item) => item.id === view.meetup.id) ?? view.meetup }
     : null;
-  const overlay = Boolean(proposal || openView);
+  // Full-screen views that replace the tabs: hide the nav and the error banner behind them.
+  const overlay = Boolean(proposal || openView || chatWith);
 
   return (
     <div className="app-shell">
-      {!authReady ? <main className="screen auth-loading"><Brand /><p>Opening KopiKaki…</p></main> : !signedIn ? <AccountScreen /> : proposal ? (
+      {!authReady ? <main className="screen auth-loading"><Brand /><p>Opening KopiKaki…</p></main> : !signedIn ? <AccountScreen /> : chatWith ? (
+        <ChatScreen
+          kaki={chatWith}
+          onBack={() => setChatWith(null)}
+          onCall={() => {
+            setChatWith(null);
+            setTab("call");
+          }}
+        />
+      ) : proposal ? (
         <MatchScreen
           candidate={proposal.match}
           reason={proposal.reason}
@@ -271,7 +283,7 @@ export function HeroApp() {
           onOpenMeetup={openMeetup}
         />
       ) : tab === "kakis" ? (
-        <KakisScreen kakis={kakis} loading={loading} />
+        <KakisScreen kakis={kakis} loading={loading} onCall={() => setTab("call")} onSelect={setChatWith} />
       ) : (
         <HomeScreen
           meetup={nextMeetup(meetups, resolveSingaporeDate("today"))}

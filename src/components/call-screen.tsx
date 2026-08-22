@@ -17,10 +17,17 @@ import {
   PROPOSE_KAKI_MATCH,
   REMEMBER_NOTE,
   SET_AVAILABILITY,
+  UPDATE_KAKI_LIST,
   UPDATE_PROFILE,
 } from "@/lib/live-tools";
 
-const MEMORY_TOOLS = new Set([REMEMBER_NOTE, FORGET_NOTE, SET_AVAILABILITY, FIND_AVAILABILITY]);
+const MEMORY_TOOLS = new Set([
+  REMEMBER_NOTE,
+  FORGET_NOTE,
+  SET_AVAILABILITY,
+  FIND_AVAILABILITY,
+  UPDATE_KAKI_LIST,
+]);
 import { Brand } from "./brand";
 
 type CallStatus = "ready" | "connecting" | "listening" | "thinking";

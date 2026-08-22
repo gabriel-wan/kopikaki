@@ -19,8 +19,8 @@ Call → Gemini understands the ask → matches a real person (or group/activity
 ## Stack (decided, not yet scaffolded)
 
 - Next.js (App Router, TypeScript, Tailwind), deployed as a web/PWA
-- Firebase: Auth (phone OTP — seniors know phone numbers, not passwords), Firestore (users, kakis, meetups, activities), Route Handlers or Cloud Functions as the Gemini relay
-- Deploy target: Firebase App Hosting
+- Firebase: Auth (phone OTP — seniors know phone numbers, not passwords), Firestore (users, kakis, meetups, activities), Route Handlers as the Gemini relay
+- Deploy target: Firebase App Hosting — one Firebase project, `firebase deploy` ships frontend + backend + Firestore rules together. Project must be on the Blaze plan (App Hosting and phone-auth SMS both require it). See `docs/ARCHITECTURE.md` for the full deployment sequence.
 
 Why: one Google project end-to-end, no app-store review loop between us and a judge's phone, fastest realistic path to a working demo in a single day. Swap it only for a concrete reason, not preference.
 
@@ -38,6 +38,8 @@ Users are seniors: large tap targets, high-contrast text, plain language, no ges
 ## Scope discipline
 
 Build depth-first: call flow → match → confirmation card → kaki list. SOS/trusted contacts, onboarding carousel, accessibility settings screen, and the notifications feed are stretch — stub or drop them if time runs short, and say so out loud. Never cut hero-flow robustness to fit one of these in instead.
+
+Real phone OTP is staged, not a blocker: build and demo the hero flow against a seeded test user first, wire in real Firebase phone auth only after the hero flow works end-to-end. It buys nothing judges score, and it's real infra risk (Blaze billing, SMS delivery, reCAPTCHA) to hit on the one day it can't fail. Promote it back to required once there's time margin.
 
 ## Conventions
 

@@ -47,6 +47,7 @@ type MeetupView = { kind: "confirmed" | "detail"; meetup: Meetup; joined: boolea
 
 export function HeroApp() {
   const [tab, setTab] = useState<Tab>("home");
+  const [homeCalling, setHomeCalling] = useState(false);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [meetups, setMeetups] = useState<Meetup[]>([]);
   const [windows, setWindows] = useState<FreeWindow[]>([]);
@@ -65,7 +66,7 @@ export function HeroApp() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [tab, proposal, view]);
+  }, [tab, homeCalling, proposal, view]);
 
   useEffect(() => {
     let disposed = false;
@@ -202,6 +203,7 @@ export function HeroApp() {
       ]);
       setProposal(null);
       setTab("home");
+      setHomeCalling(false);
       setView({ kind: "confirmed", meetup: result.meetup, joined: result.joined === true });
       return result.meetup;
     } catch (cause) {
@@ -220,6 +222,13 @@ export function HeroApp() {
     }
   }
 
+  function openCall() {
+    setChatWith(null);
+    setView(null);
+    setTab("home");
+    setHomeCalling(true);
+  }
+
   function openMeetup(meetupId: string) {
     const meetup = meetups.find((item) => item.id === meetupId);
     if (meetup) setView({ kind: "detail", meetup, joined: false });
@@ -231,7 +240,7 @@ export function HeroApp() {
     ? { ...view, meetup: meetups.find((item) => item.id === view.meetup.id) ?? view.meetup }
     : null;
   // Full-screen views that replace the tabs: hide the nav and the error banner behind them.
-  const overlay = Boolean(proposal || openView || chatWith);
+  const overlay = Boolean(proposal || openView || chatWith || homeCalling);
 
   return (
     <div className="app-shell">
@@ -239,10 +248,7 @@ export function HeroApp() {
         <ChatScreen
           kaki={chatWith}
           onBack={() => setChatWith(null)}
-          onCall={() => {
-            setChatWith(null);
-            setTab("call");
-          }}
+          onCall={openCall}
         />
       ) : proposal ? (
         <MatchScreen
@@ -267,29 +273,26 @@ export function HeroApp() {
           meetup={openView.meetup}
           currentUserName={profileName}
           onBack={() => setView(null)}
-          onCall={() => {
-            setView(null);
-            setTab("call");
-          }}
+          onCall={openCall}
         />
-      ) : tab === "call" ? (
-        <CallScreen onBack={() => setTab("home")} onTranscript={preview} />
+      ) : homeCalling ? (
+        <CallScreen onBack={() => setHomeCalling(false)} onTranscript={preview} />
       ) : tab === "schedule" ? (
         <ScheduleScreen
           meetups={meetups}
           windows={windows}
           loading={loading}
-          onAdd={() => setTab("call")}
+          onAdd={openCall}
           onOpenMeetup={openMeetup}
         />
       ) : tab === "kakis" ? (
-        <KakisScreen kakis={kakis} loading={loading} onCall={() => setTab("call")} onSelect={setChatWith} />
+        <KakisScreen kakis={kakis} loading={loading} onCall={openCall} onSelect={setChatWith} />
       ) : (
         <HomeScreen
           meetup={nextMeetup(meetups, resolveSingaporeDate("today"))}
           loading={loading}
           userName={userName}
-          onCall={() => setTab("call")}
+          onCall={openCall}
           onLogout={logout}
           onOpenMeetup={openMeetup}
         />

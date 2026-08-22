@@ -21,7 +21,8 @@
     "seed": "tsx scripts/seed.ts",
     "seed:production": "tsx scripts/seed-production.ts",
     "check:seed-production": "tsx src/lib/production-seed.test.ts",
-    "check:profile-recovery": "tsx src/lib/profile-recovery.test.ts"
+    "check:profile-recovery": "tsx src/lib/profile-recovery.test.ts",
+    "check:home-call-flow": "tsx src/components/home-call-flow.test.ts"
   },
   "dependencies": {
     "@google/genai": "2.18.0",

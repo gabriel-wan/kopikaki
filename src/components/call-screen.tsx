@@ -28,8 +28,6 @@ const MEMORY_TOOLS = new Set([
   FIND_AVAILABILITY,
   UPDATE_KAKI_LIST,
 ]);
-import { Brand } from "./brand";
-
 type CallStatus = "ready" | "connecting" | "listening" | "thinking";
 
 export function CallScreen({
@@ -280,11 +278,8 @@ export function CallScreen({
         <button className="icon-button" onClick={onBack} aria-label="Go back">
           <ArrowLeft />
         </button>
-        <Brand compact />
-        <span className="icon-spacer" />
       </header>
       <section className="call-center">
-        <p className="eyebrow">Calling KopiKaki</p>
         <h1>{heading}</h1>
         <div className={status === "listening" ? "voice-orb listening" : "voice-orb"} aria-hidden="true">
           <Image className="voice-character" src="/kopikaki-voice.png" alt="" width={172} height={172} priority />

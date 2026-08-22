@@ -1,3 +1,5 @@
+import { parseMemoryNotes, type MemoryNote } from "./memory";
+
 export type CandidateKind = "person" | "group" | "activity";
 export type MatchTier = "people" | "groups" | "activities";
 
@@ -89,16 +91,19 @@ export type UserProfile = {
   name: string;
   neighborhood?: string;
   languages?: string[];
+  notes?: MemoryNote[];
 };
 
 export function parseUserProfile(value: unknown): UserProfile {
   const data = objectValue(value, "User profile");
+  const notes = parseMemoryNotes(data.notes);
   return {
     name: nonEmptyString(data.preferredName ?? data.name, "User name"),
     ...(typeof data.neighborhood === "string" && data.neighborhood.trim()
       ? { neighborhood: data.neighborhood.trim() } : {}),
     ...(Array.isArray(data.languages) && data.languages.length
       ? { languages: stringList(data.languages, "User languages", true) } : {}),
+    ...(notes.length ? { notes } : {}),
   };
 }
 

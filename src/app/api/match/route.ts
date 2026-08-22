@@ -1,4 +1,4 @@
-import { ThinkingLevel, Type } from "@google/genai";
+import { FunctionCallingConfigMode, ThinkingLevel, Type } from "@google/genai";
 import { FieldValue } from "firebase-admin/firestore";
 import { NextResponse } from "next/server";
 
@@ -13,6 +13,11 @@ import { adminDb, requireUser } from "@/lib/firebase-admin";
 import { capitalize, meetupTime } from "@/lib/format";
 import { geminiClient, MATCH_MODEL } from "@/lib/gemini";
 import { parseIntentFallback } from "@/lib/intent";
+import {
+  loadMatchPoolConcurrently,
+  type CandidatePool,
+  type UnderstoodIntent,
+} from "@/lib/match-pool";
 import { matchCandidates } from "@/lib/matcher";
 
 export const runtime = "nodejs";
@@ -22,7 +27,11 @@ async function candidates(collectionName: "kakis" | "groups" | "activities") {
   return snapshot.docs.map((doc) => parseCandidate(doc.id, doc.data()));
 }
 
-async function loadMatchPool(intent: MatchIntent, rawRequest: string, askGemini: boolean) {
+async function understandIntent(
+  intent: MatchIntent,
+  rawRequest: string,
+  askGemini: boolean,
+): Promise<UnderstoodIntent> {
   let source: "gemini-tool" | "local" = "local";
   let understoodIntent = intent;
   const ai = askGemini ? geminiClient() : null;
@@ -31,7 +40,10 @@ async function loadMatchPool(intent: MatchIntent, rawRequest: string, askGemini:
     try {
       const response = await ai.models.generateContent({
         model: MATCH_MODEL,
-        contents: "Understand this Singapore senior's request, including Singlish, then call load_match_pool so the server can read Firestore: " + rawRequest,
+        contents:
+          "Extract the activity, time of day, Singapore neighbourhood, and preferred language. " +
+          "Understand Singlish and local languages, then call load_match_pool. Request: " +
+          rawRequest,
         config: {
           thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
           tools: [{
@@ -50,6 +62,12 @@ async function loadMatchPool(intent: MatchIntent, rawRequest: string, askGemini:
               },
             }],
           }],
+          toolConfig: {
+            functionCallingConfig: {
+              mode: FunctionCallingConfigMode.ANY,
+              allowedFunctionNames: ["load_match_pool"],
+            },
+          },
         },
       });
       const call = response.functionCalls?.find((item) => item.name === "load_match_pool");
@@ -62,12 +80,45 @@ async function loadMatchPool(intent: MatchIntent, rawRequest: string, askGemini:
     }
   }
 
+  return { source, intent: understoodIntent };
+}
+
+async function loadCandidates(): Promise<CandidatePool> {
   const [people, groups, activities] = await Promise.all([
     candidates("kakis"),
     candidates("groups"),
     candidates("activities"),
   ]);
-  return { people, groups, activities, source, intent: understoodIntent };
+  return { people, groups, activities };
+}
+
+async function loadMatchPool(intent: MatchIntent, rawRequest: string, askGemini: boolean) {
+  const startedAt = performance.now();
+  let geminiMs = 0;
+  let firestoreMs = 0;
+  const pool = await loadMatchPoolConcurrently(
+    async () => {
+      const stageStartedAt = performance.now();
+      try {
+        return await understandIntent(intent, rawRequest, askGemini);
+      } finally {
+        geminiMs = performance.now() - stageStartedAt;
+      }
+    },
+    async () => {
+      const stageStartedAt = performance.now();
+      try {
+        return await loadCandidates();
+      } finally {
+        firestoreMs = performance.now() - stageStartedAt;
+      }
+    },
+  );
+  console.info(
+    `[match-pool] source=${pool.source} geminiMs=${Math.round(geminiMs)} ` +
+      `firestoreMs=${Math.round(firestoreMs)} totalMs=${Math.round(performance.now() - startedAt)}`,
+  );
+  return pool;
 }
 
 export async function POST(request: Request) {

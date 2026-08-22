@@ -10,29 +10,31 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "check:matcher": "tsx src/lib/matcher.test.ts",
+    "check:match-pool": "tsx src/lib/match-pool.test.ts",
+    "check:pwa": "tsx scripts/pwa.test.ts",
     "emulators": "firebase emulators:start --project kopikaki-local --import=.firebase-data --export-on-exit=.firebase-data",
     "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
-    "@google/genai": "latest",
-    "firebase": "latest",
-    "firebase-admin": "latest",
-    "lucide-react": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-dom": "latest"
+    "@google/genai": "2.18.0",
+    "firebase": "12.18.0",
+    "firebase-admin": "14.3.0",
+    "lucide-react": "1.33.0",
+    "next": "16.3.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "latest",
-    "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "eslint": "latest",
-    "eslint-config-next": "latest",
-    "firebase-tools": "latest",
-    "tailwindcss": "latest",
-    "tsx": "latest",
-    "typescript": "latest"
+    "@eslint/eslintrc": "3.3.6",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.2.0",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.3.2",
+    "firebase-tools": "15.28.1",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.12",
+    "typescript": "6.0.3"
   }
 }

@@ -97,7 +97,25 @@ export function HeroApp() {
       });
 
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      if (process.env.NODE_ENV === "production") {
+        void navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+      } else {
+        void navigator.serviceWorker
+          .getRegistrations()
+          .then((registrations) =>
+            Promise.all(registrations.map((registration) => registration.unregister())),
+          )
+          .then(async () => {
+            if (!("caches" in window)) return;
+            const keys = await caches.keys();
+            await Promise.all(
+              keys
+                .filter((key) => key.startsWith("kopikaki-"))
+                .map((key) => caches.delete(key)),
+            );
+          })
+          .catch(() => undefined);
+      }
     }
     return () => {
       disposed = true;

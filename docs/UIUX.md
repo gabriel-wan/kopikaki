@@ -1,0 +1,1 @@
+# This file should contain the user stories specifications for how users should use kopikakis

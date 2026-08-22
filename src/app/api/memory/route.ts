@@ -8,6 +8,7 @@ import {
   availabilityId,
   parseMemoryNotes,
   parseMemoryOperation,
+  removeMemoryNote,
   windowsOverlap,
 } from "@/lib/memory";
 
@@ -39,6 +40,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ saved: true });
     }
 
+    if (op.operation === "forget_note") {
+      const userRef = adminDb.collection("users").doc(userId);
+      const snapshot = await userRef.get();
+      const before = parseMemoryNotes(snapshot.data()?.notes);
+      const after = removeMemoryNote(before, op.args.text);
+      await userRef.set({ notes: after }, { merge: true });
+      return NextResponse.json({ removed: after.length < before.length });
+    }
+
     if (op.operation === "set_availability") {
       const ref = adminDb.collection("availability").doc(
         availabilityId(userId, op.args.activityKey, op.args.localDate, op.args.startMinute, op.args.endMinute),
@@ -63,22 +73,25 @@ export async function POST(request: Request) {
       return NextResponse.json({ saved: true });
     }
 
-    // find_availability
+    // find_availability — date is the only field always present (activity/time are optional
+    // for an open-ended "who's free today" question), so it's the one field queried on.
     // ponytail: single-field query (auto-indexed) + in-memory filter — a room of seniors,
     // not a scale problem. Add a composite index if this collection ever grows past that.
     const snapshot = await adminDb
       .collection("availability")
-      .where("activityKey", "==", op.args.activityKey)
+      .where("localDate", "==", op.args.localDate)
       .get();
+    const { activityKey, startMinute, endMinute } = op.args;
     const matches = snapshot.docs
       .map((doc) => doc.data())
       .filter((data) =>
         data.userId !== userId &&
-        data.localDate === op.args.localDate &&
-        windowsOverlap(data.startMinute, data.endMinute, op.args.startMinute, op.args.endMinute));
+        (!activityKey || data.activityKey === activityKey) &&
+        (startMinute === undefined || (endMinute !== undefined && windowsOverlap(data.startMinute, data.endMinute, startMinute, endMinute))));
     return NextResponse.json({
       matches: matches.map((data) => ({
         name: data.name as string,
+        activity: data.activity as string,
         startTime: data.startTime as string,
         endTime: data.endTime as string,
       })),

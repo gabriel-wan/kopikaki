@@ -27,10 +27,23 @@ export type SetAvailabilityArgs = AvailabilityWindow & {
   available: boolean;
 };
 
-export type FindAvailabilityArgs = AvailabilityWindow;
+export type ForgetNoteArgs = {
+  text: string;
+};
+
+// Unlike set_availability, a lookup doesn't have to name an activity or a time —
+// "who's free today, for anything" is a valid question. Only the date is required.
+export type FindAvailabilityArgs = {
+  localDate: string;
+  activity?: string;
+  activityKey?: string;
+  startMinute?: number;
+  endMinute?: number;
+};
 
 export type MemoryOperation =
   | { operation: "remember_note"; args: RememberNoteArgs }
+  | { operation: "forget_note"; args: ForgetNoteArgs }
   | { operation: "set_availability"; args: SetAvailabilityArgs }
   | { operation: "find_availability"; args: FindAvailabilityArgs };
 
@@ -111,6 +124,28 @@ function parseWindow(args: Record<string, unknown>, now: Date): AvailabilityWind
   };
 }
 
+function parseFindAvailability(args: Record<string, unknown>, now: Date): FindAvailabilityArgs {
+  const localDate = resolveSingaporeDate(args.date, now);
+  const activity = typeof args.activity === "string" && args.activity.trim()
+    ? textValue(args.activity, "Activity", 80)
+    : undefined;
+  const hasStart = args.startTime !== undefined && args.startTime !== null && args.startTime !== "";
+  const hasEnd = args.endTime !== undefined && args.endTime !== null && args.endTime !== "";
+  if (hasStart !== hasEnd) throw new Error("Give both a start and end time, or neither.");
+  let window: { startMinute: number; endMinute: number } | undefined;
+  if (hasStart) {
+    const start = parseTime(args.startTime);
+    const end = parseTime(args.endTime);
+    if (end.minute <= start.minute) throw new Error("End time must be after start time.");
+    window = { startMinute: start.minute, endMinute: end.minute };
+  }
+  return {
+    localDate,
+    ...(activity ? { activity, activityKey: activity.toLocaleLowerCase("en-SG") } : {}),
+    ...(window ?? {}),
+  };
+}
+
 export function parseMemoryOperation(value: unknown, now = new Date()): MemoryOperation {
   const data = objectValue(value, "Memory request");
   const args = objectValue(data.args, "Memory arguments");
@@ -124,6 +159,9 @@ export function parseMemoryOperation(value: unknown, now = new Date()): MemoryOp
       args: { text: textValue(args.text, "Memory text", 240), kind: kind as MemoryNoteKind },
     };
   }
+  if (data.operation === "forget_note") {
+    return { operation: "forget_note", args: { text: textValue(args.text, "Memory text", 240) } };
+  }
   if (data.operation === "set_availability") {
     if (typeof args.available !== "boolean") throw new Error("Availability status is invalid.");
     return {
@@ -132,7 +170,7 @@ export function parseMemoryOperation(value: unknown, now = new Date()): MemoryOp
     };
   }
   if (data.operation === "find_availability") {
-    return { operation: "find_availability", args: parseWindow(args, now) };
+    return { operation: "find_availability", args: parseFindAvailability(args, now) };
   }
   throw new Error("Memory operation is invalid.");
 }
@@ -167,6 +205,11 @@ export function appendMemoryNote(notes: MemoryNote[], note: MemoryNote): MemoryN
     existing.kind === note.kind && existing.text.toLocaleLowerCase("en-SG") === note.text.toLocaleLowerCase("en-SG"));
   if (duplicate) return notes;
   return [...notes, note].slice(-MAX_MEMORY_NOTES);
+}
+
+export function removeMemoryNote(notes: MemoryNote[], text: string): MemoryNote[] {
+  const needle = text.trim().toLocaleLowerCase("en-SG");
+  return notes.filter((note) => !note.text.toLocaleLowerCase("en-SG").includes(needle));
 }
 
 export function parseMemoryNotes(value: unknown): MemoryNote[] {

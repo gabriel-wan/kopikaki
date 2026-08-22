@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { parseCandidate, parseMatchIntent, type Candidate, type MatchIntent } from "./domain";
 import { parseIntentFallback } from "./intent";
-import { matchCandidates } from "./matcher";
+import { excludeCaller, matchCandidates } from "./matcher";
 
 const intent: MatchIntent = {
   activity: "pickleball",
@@ -71,6 +71,9 @@ assert.deepEqual(matchCandidates(intent, [farAwayPerson], [], []), {
   attempted: ["people"],
   isNearby: false,
 });
+
+const selfPerson = { ...person, id: "test-user" };
+assert.deepEqual(excludeCaller([selfPerson, person], "test-user"), [person]);
 
 const cartPerson = { ...person, id: "cart", activities: ["cart racing"] };
 assert.equal(matchCandidates({ ...intent, activity: "art" }, [cartPerson], [], []).match, null);

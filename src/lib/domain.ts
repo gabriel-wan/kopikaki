@@ -85,6 +85,23 @@ export function parseMatchIntent(value: unknown): MatchIntent {
   };
 }
 
+export type UserProfile = {
+  name: string;
+  neighborhood?: string;
+  languages?: string[];
+};
+
+export function parseUserProfile(value: unknown): UserProfile {
+  const data = objectValue(value, "User profile");
+  return {
+    name: nonEmptyString(data.preferredName ?? data.name, "User name"),
+    ...(typeof data.neighborhood === "string" && data.neighborhood.trim()
+      ? { neighborhood: data.neighborhood.trim() } : {}),
+    ...(Array.isArray(data.languages) && data.languages.length
+      ? { languages: stringList(data.languages, "User languages", true) } : {}),
+  };
+}
+
 export function parseCandidate(id: string, value: unknown): Candidate {
   const data = objectValue(value, "Candidate");
   const kind = nonEmptyString(data.kind, "Candidate kind") as CandidateKind;

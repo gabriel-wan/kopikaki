@@ -1,11 +1,13 @@
 "use client";
 
-import { GoogleGenAI, Modality, type Session } from "@google/genai";
+import { GoogleGenAI, Modality, type FunctionCall, type Session } from "@google/genai";
 import { ArrowLeft, Mic, Search, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { type Candidate, type MatchIntent, type MatchTier, type Meetup } from "@/lib/domain";
 import { apiPost } from "@/lib/firebase-client";
 import { createAudioPlayer, streamMicrophone } from "@/lib/live-audio";
+import { CONFIRM_KAKI_MATCH, LIVE_TOOLS, PROPOSE_KAKI_MATCH } from "@/lib/live-tools";
 import { Brand } from "./brand";
 
 type CallStatus = "ready" | "connecting" | "listening" | "thinking";
@@ -24,6 +26,8 @@ export function CallScreen({
   const sessionRef = useRef<Session | null>(null);
   const stopMicRef = useRef<null | (() => Promise<void>)>(null);
   const closePlayerRef = useRef<null | (() => Promise<void>)>(null);
+  const proposedIntentRef = useRef<MatchIntent | null>(null);
+  const pendingHangupRef = useRef(false);
 
   const stopVoice = useCallback(async (resetStatus = true) => {
     const stopMic = stopMicRef.current;
@@ -32,6 +36,8 @@ export function CallScreen({
     stopMicRef.current = null;
     sessionRef.current = null;
     closePlayerRef.current = null;
+    proposedIntentRef.current = null;
+    pendingHangupRef.current = false;
 
     const cleanup: Promise<unknown>[] = [];
     if (stopMic) cleanup.push(stopMic());
@@ -55,12 +61,71 @@ export function CallScreen({
     };
   }, [stopVoice]);
 
+  async function handlePropose(call: FunctionCall, session: Session) {
+    const request = typeof call.args?.request === "string" ? call.args.request : "";
+    try {
+      const result = await apiPost<{
+        match: Candidate | null; reason?: string; attempted: MatchTier[]; intent: MatchIntent;
+      }>("/api/match", { transcript: request, confirm: false });
+      proposedIntentRef.current = result.match ? result.intent : null;
+      session.sendToolResponse({
+        functionResponses: [{
+          id: call.id,
+          name: call.name,
+          response: result.match
+            ? { found: true, name: result.match.name, reason: result.reason }
+            : { found: false, attempted: result.attempted },
+        }],
+      });
+    } catch (cause) {
+      proposedIntentRef.current = null;
+      session.sendToolResponse({
+        functionResponses: [{
+          id: call.id,
+          name: call.name,
+          response: { error: cause instanceof Error ? cause.message : "Could not check for a match." },
+        }],
+      });
+    }
+  }
+
+  async function handleConfirm(call: FunctionCall, session: Session) {
+    const intent = proposedIntentRef.current;
+    if (!intent) {
+      session.sendToolResponse({
+        functionResponses: [{ id: call.id, name: call.name, response: { error: "No proposal to confirm yet." } }],
+      });
+      return;
+    }
+    try {
+      const result = await apiPost<{ meetup: Meetup }>("/api/match", { intent, confirm: true });
+      pendingHangupRef.current = true;
+      session.sendToolResponse({
+        functionResponses: [{
+          id: call.id,
+          name: call.name,
+          response: { booked: true, title: result.meetup.title, when: result.meetup.timeLabel, venue: result.meetup.venue },
+        }],
+      });
+    } catch (cause) {
+      session.sendToolResponse({
+        functionResponses: [{
+          id: call.id,
+          name: call.name,
+          response: { error: cause instanceof Error ? cause.message : "Could not confirm the meetup." },
+        }],
+      });
+    }
+  }
+
   async function startVoice() {
     await stopVoice(false);
     setError("");
     setStatus("connecting");
     try {
-      const { token, model } = await apiPost<{ token: string; model: string }>("/api/live-token");
+      const { token, model, systemInstruction } = await apiPost<{
+        token: string; model: string; systemInstruction: string;
+      }>("/api/live-token");
       const player = createAudioPlayer();
       closePlayerRef.current = player.close;
       const ai = new GoogleGenAI({
@@ -74,8 +139,8 @@ export function CallScreen({
           responseModalities: [Modality.AUDIO],
           inputAudioTranscription: {},
           outputAudioTranscription: {},
-          systemInstruction:
-            "You are KopiKaki, a warm concise Singapore social concierge for seniors. Ask what the caller feels like doing, when, and where. Understand Singlish and English, Mandarin, Malay, Tamil, or Hokkien. Keep replies short and guide them toward a real meetup.",
+          systemInstruction,
+          tools: LIVE_TOOLS,
         },
         callbacks: {
           onmessage(message) {
@@ -85,6 +150,16 @@ export function CallScreen({
             }
             for (const part of message.serverContent?.modelTurn?.parts ?? []) {
               if (part.inlineData?.data) player.play(part.inlineData.data);
+            }
+            if (liveSession) {
+              for (const call of message.toolCall?.functionCalls ?? []) {
+                if (call.name === PROPOSE_KAKI_MATCH) void handlePropose(call, liveSession);
+                else if (call.name === CONFIRM_KAKI_MATCH) void handleConfirm(call, liveSession);
+              }
+            }
+            if (pendingHangupRef.current && message.serverContent?.turnComplete) {
+              pendingHangupRef.current = false;
+              void stopVoice();
             }
           },
           onerror: () => {

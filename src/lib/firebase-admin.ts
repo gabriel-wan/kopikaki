@@ -2,6 +2,7 @@ import { applicationDefault, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { UnauthorizedError } from "./api-error";
+import { parseUserProfile, type UserProfile } from "./domain";
 import {
   authEmulatorPort,
   firebaseProjectId,
@@ -35,5 +36,15 @@ export async function requireUser(request: Request): Promise<string> {
     return token.uid;
   } catch {
     throw new UnauthorizedError();
+  }
+}
+
+export async function loadUserProfile(userId: string): Promise<UserProfile | null> {
+  const snapshot = await adminDb.collection("users").doc(userId).get();
+  if (!snapshot.exists) return null;
+  try {
+    return parseUserProfile(snapshot.data());
+  } catch {
+    return null; // malformed profile — callers decide how to degrade
   }
 }

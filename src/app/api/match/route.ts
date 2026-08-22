@@ -9,7 +9,7 @@ import {
   type MatchIntent,
   type Meetup,
 } from "@/lib/domain";
-import { adminDb, requireUser } from "@/lib/firebase-admin";
+import { adminDb, loadUserProfile, requireUser } from "@/lib/firebase-admin";
 import { capitalize, meetupTime } from "@/lib/format";
 import { geminiClient, MATCH_MODEL } from "@/lib/gemini";
 import { parseIntentFallback } from "@/lib/intent";
@@ -18,13 +18,19 @@ import {
   type CandidatePool,
   type UnderstoodIntent,
 } from "@/lib/match-pool";
-import { matchCandidates } from "@/lib/matcher";
+import { excludeCaller, matchCandidates } from "@/lib/matcher";
 
 export const runtime = "nodejs";
 
 async function candidates(collectionName: "kakis" | "groups" | "activities") {
   const snapshot = await adminDb.collection(collectionName).get();
   return snapshot.docs.map((doc) => parseCandidate(doc.id, doc.data()));
+}
+
+async function requireUserName(userId: string): Promise<string> {
+  const profile = await loadUserProfile(userId);
+  if (!profile) throw new Error("Your profile is missing. Please reseed the demo data.");
+  return profile.name;
 }
 
 async function understandIntent(
@@ -148,8 +154,23 @@ export async function POST(request: Request) {
 
     const confirm = values.confirm === true;
     const rawRequest = transcript || requestedIntent.notes || JSON.stringify(requestedIntent);
-    const pool = await loadMatchPool(requestedIntent, rawRequest, !confirm);
-    const result = matchCandidates(pool.intent, pool.people, pool.groups, pool.activities);
+    const [pool, userName] = await Promise.all([
+      loadMatchPool(requestedIntent, rawRequest, !confirm),
+      requireUserName(userId),
+    ]);
+    // Makes this caller findable by whoever calls next — the fallback order (People→Groups→Activities)
+    // only has real supply if callers themselves become "People."
+    await adminDb.collection("kakis").doc(userId).set({
+      kind: "person",
+      name: userName,
+      activities: [pool.intent.activity],
+      times: [pool.intent.timeOfDay],
+      neighborhood: pool.intent.neighborhood,
+      languages: [pool.intent.language],
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    const people = excludeCaller(pool.people, userId);
+    const result = matchCandidates(pool.intent, people, pool.groups, pool.activities);
     if (!result.match) {
       return NextResponse.json({
         match: null,
@@ -185,7 +206,7 @@ export async function POST(request: Request) {
       status: "confirmed",
       matchedKind: result.match.kind,
       matchedId: result.match.id,
-      participantNames: ["You", ...(result.match.members ?? [result.match.name])],
+      participantNames: [userName, ...(result.match.members ?? [result.match.name])],
       reason,
     };
     await meetupRef.set({ ...meetup, createdAt: FieldValue.serverTimestamp() });

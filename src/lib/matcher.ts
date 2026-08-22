@@ -11,6 +11,10 @@ function activityFits(wanted: string, offered: string): boolean {
   return wantedTokens.every((token) => offeredSet.has(token)) || offeredTokens.every((token) => wantedSet.has(token));
 }
 
+export function excludeCaller(candidates: Candidate[], callerId: string): Candidate[] {
+  return candidates.filter((candidate) => candidate.id !== callerId);
+}
+
 function compatible(intent: MatchIntent, candidate: Candidate): boolean {
   const wantedActivity = normal(intent.activity);
   const wantedTime = normal(intent.timeOfDay);

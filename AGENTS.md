@@ -30,6 +30,7 @@ Why: one Google project end-to-end, no app-store review loop between us and a ju
 - Matching/reasoning: Gemini 3.6 Flash, called server-side with function calling over Firestore data.
 - **Trust boundary — never relax this:** the API key never reaches the client. Mint ephemeral tokens or relay every Gemini call through a server route.
 - Matching tries **People → Groups → Activities**, in that order, before returning "nothing found." This is the cold-start fallback the product depends on (see `docs/SPECIFICATIONS.md`) — a 1:1-only matcher is an incomplete implementation, not an acceptable simplification.
+- **Meetups run ahead of those three**: if a caller asks for something that is already booked, the agent offers to join the people already going instead of arranging a second parallel outing. This only adds a tier in front — it never reorders or removes People → Groups → Activities.
 
 ## Accessibility — non-negotiable, not a stretch screen
 

@@ -21,7 +21,7 @@ async function main() {
     () => pendingIntent,
     async () => {
       candidatesStarted = true;
-      return { people: [], groups: [], activities: [] };
+      return { meetups: [], people: [], groups: [], activities: [] };
     },
   );
 
@@ -35,6 +35,7 @@ async function main() {
   assert.deepEqual(await combined, {
     intent,
     source: "gemini-tool",
+    meetups: [],
     people: [],
     groups: [],
     activities: [],

@@ -94,6 +94,12 @@ Don't rely exclusively on 1:1 matching. Give the agent three things it can find,
 
 *(source notes cut off here — the Groups/Activities example was never completed. The ordering itself is still the binding requirement.)*
 
+### 5a. Joining what already exists
+
+Ahead of those three tiers, the matcher checks **meetups already booked for today or later**. If Uncle Heng's pickleball is already on the calendar and Auntie Mary asks for pickleball, KopiKaki offers her the existing meetup — "Uncle Heng and Auntie Susan are already going, want to join them?" — and a verbal yes adds her to that same meetup rather than creating a second one.
+
+This is what turns the app from one-caller-at-a-time into an actual group: the second caller sees "3 going" on a real card, and the third sees "4 going". It reuses the same compatibility rules (activity, time of day, neighbourhood, language) as every other tier, so nothing new can drift out of sync.
+
 ## 6. Accessibility rationale: dialects & discoverability for seniors
 
 A lot of tech is designed by and for younger users, and the mismatch shows. Reasons elderly people struggle with technology *(source notes list 3 of a stated 5 — captured as-is, not completed here)*:

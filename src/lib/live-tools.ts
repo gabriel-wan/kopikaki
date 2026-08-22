@@ -16,7 +16,7 @@ export const LIVE_TOOLS: ToolListUnion = [{
   functionDeclarations: [
     {
       name: PROPOSE_KAKI_MATCH,
-      description: "Call once you understand what the caller wants to do, when, and where. Pass your own short paraphrase, not the raw transcript. Looks up a match without booking anything.",
+      description: "Call once you understand what the caller wants to do, when, and where. Pass your own short paraphrase, not the raw transcript. Looks up a match without booking anything. If it returns joining=true, the same thing is already arranged and the caller can join the people already going — say who is going and ask if they want to join them.",
       parameters: {
         type: Type.OBJECT,
         properties: {
@@ -27,7 +27,7 @@ export const LIVE_TOOLS: ToolListUnion = [{
     },
     {
       name: CONFIRM_KAKI_MATCH,
-      description: "Call only after the caller gives a clear verbal yes to the proposed match. Books the meetup.",
+      description: "Call only after the caller gives a clear verbal yes to the proposed match. Books the meetup, or adds the caller to the existing meetup they were just offered.",
       parameters: { type: Type.OBJECT, properties: {} },
     },
     {

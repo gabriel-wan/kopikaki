@@ -25,7 +25,7 @@ flowchart TD
 
     subgraph Server["Next.js Route Handlers (Node runtime)"]
         LiveToken["/api/live-token<br/>mints 1-use ephemeral token"]
-        Match["/api/match<br/>intent → People→Groups→Activities matcher"]
+        Match["/api/match<br/>intent → Meetups→People→Groups→Activities matcher"]
     end
 
     subgraph Google["Google AI"]
@@ -57,7 +57,7 @@ flowchart TD
 - **Data** — Firestore collections: users, kakis, meetups, activities. Realtime `onSnapshot` listeners drive the home screen card with no custom websocket layer.
 - **Auth** — Firebase Auth, phone OTP. Staged in behind the hero flow — see "Build sequencing" below.
 - **Voice** — Gemini 3.1 Flash Live Preview, invoked through the Route Handler relay. The browser never talks to Gemini directly.
-- **Matching** — Gemini 3.6 Flash, server-side function calling over Firestore reads, People → Groups → Activities fallback order (non-negotiable, see AGENTS.md).
+- **Matching** — Gemini 3.6 Flash, server-side function calling over Firestore reads, Meetups → People → Groups → Activities fallback order; a caller asking for something already booked joins it instead of starting a parallel one. The last three tiers and their order are non-negotiable, see AGENTS.md.
 
 ## Deployment
 

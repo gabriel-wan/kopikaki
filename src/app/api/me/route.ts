@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     const profile = await loadUserProfile(userId);
     const snapshot = await adminDb
       .collection("meetups")
-      .where("userId", "==", userId)
+      .where("participantIds", "array-contains", userId)
       .orderBy("createdAt", "desc")
       .limit(1)
       .get();

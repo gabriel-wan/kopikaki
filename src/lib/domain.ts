@@ -1,7 +1,7 @@
 import { parseMemoryNotes, type MemoryNote } from "./memory";
 
-export type CandidateKind = "person" | "group" | "activity";
-export type MatchTier = "people" | "groups" | "activities";
+export type CandidateKind = "person" | "group" | "activity" | "meetup";
+export type MatchTier = "meetups" | "people" | "groups" | "activities";
 
 export type MatchIntent = {
   activity: string;
@@ -32,18 +32,46 @@ export type MatchResult = {
 
 export type Meetup = {
   id: string;
-  userId: string;
+  userId: string; // the caller who booked it first; others join via participantIds
   title: string;
   dateLabel: string;
+  localDate?: string; // YYYY-MM-DD in Singapore time; older docs predate it
   timeLabel: string;
   venue: string;
   neighborhood: string;
   status: "confirmed";
   matchedKind: CandidateKind;
   matchedId: string;
+  participantIds?: string[]; // every caller who is going; older docs predate it
   participantNames: string[];
   reason: string;
+  // Kept so a later caller's request can be matched against this meetup and join it.
+  activity?: string;
+  timeOfDay?: MatchIntent["timeOfDay"];
+  languages?: string[];
 };
+
+export function meetupParticipantIds(meetup: Meetup): string[] {
+  return meetup.participantIds ?? [meetup.userId];
+}
+
+// Projects a booked meetup into the same shape the matcher already understands, so
+// "join what's already happening" reuses the existing compatibility rules instead of
+// growing a second, subtly different matcher.
+export function openMeetupCandidate(meetup: Meetup): Candidate | null {
+  if (!meetup.activity || !meetup.timeOfDay || !meetup.languages?.length) return null;
+  return {
+    id: meetup.id,
+    kind: "meetup",
+    name: meetup.title,
+    activities: [meetup.activity],
+    times: [meetup.timeOfDay],
+    neighborhood: meetup.neighborhood,
+    languages: meetup.languages,
+    members: meetup.participantNames,
+    venue: meetup.venue,
+  };
+}
 
 const timeValues = new Set<MatchIntent["timeOfDay"]>([
   "morning",

@@ -86,7 +86,13 @@ export function CallScreen({
           id: call.id,
           name: call.name,
           response: result.match
-            ? { found: true, name: result.match.name, reason: result.reason }
+            ? {
+                found: true,
+                name: result.match.name,
+                reason: result.reason,
+                joining: result.match.kind === "meetup",
+                alreadyGoing: result.match.members ?? [],
+              }
             : { found: false, attempted: result.attempted },
         }],
       });
@@ -111,13 +117,20 @@ export function CallScreen({
       return;
     }
     try {
-      const result = await apiPost<{ meetup: Meetup }>("/api/match", { intent, confirm: true });
+      const result = await apiPost<{ meetup: Meetup; joined?: boolean }>("/api/match", { intent, confirm: true });
       pendingHangupRef.current = true;
       session.sendToolResponse({
         functionResponses: [{
           id: call.id,
           name: call.name,
-          response: { booked: true, title: result.meetup.title, when: result.meetup.timeLabel, venue: result.meetup.venue },
+          response: {
+            booked: true,
+            joined: result.joined === true,
+            title: result.meetup.title,
+            when: result.meetup.timeLabel,
+            venue: result.meetup.venue,
+            going: result.meetup.participantNames.length,
+          },
         }],
       });
     } catch (cause) {

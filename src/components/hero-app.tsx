@@ -2,6 +2,7 @@
 
 import {
   collection,
+  doc,
   limit,
   onSnapshot,
   orderBy,
@@ -20,13 +21,18 @@ import {
   type Meetup,
 } from "@/lib/domain";
 import { apiPost, auth, connectLocalFirebase, db } from "@/lib/firebase-client";
+import { resolveSingaporeDate } from "@/lib/memory";
+import { nextMeetup, parseFreeWindow, type FreeWindow } from "@/lib/schedule";
 import { AccountScreen } from "./account-screen";
 import { Brand } from "./brand";
 import { BottomNav, type Tab } from "./bottom-nav";
 import { CallScreen } from "./call-screen";
 import { HomeScreen } from "./home-screen";
 import { KakisScreen } from "./kakis-screen";
+import { MatchFoundScreen } from "./match-found-screen";
 import { MatchScreen } from "./match-screen";
+import { MeetupDetailScreen } from "./meetup-detail-screen";
+import { ScheduleScreen } from "./schedule-screen";
 
 type Proposal = {
   match: Candidate;
@@ -35,10 +41,16 @@ type Proposal = {
   intent: MatchIntent;
 };
 
+// A meetup drilled into, either straight after confirming it or from a card.
+type MeetupView = { kind: "confirmed" | "detail"; meetup: Meetup; joined: boolean };
+
 export function HeroApp() {
   const [tab, setTab] = useState<Tab>("home");
   const [proposal, setProposal] = useState<Proposal | null>(null);
-  const [meetup, setMeetup] = useState<Meetup | null>(null);
+  const [meetups, setMeetups] = useState<Meetup[]>([]);
+  const [windows, setWindows] = useState<FreeWindow[]>([]);
+  const [view, setView] = useState<MeetupView | null>(null);
+  const [userName, setUserName] = useState("");
   const [kakis, setKakis] = useState<Candidate[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -48,7 +60,7 @@ export function HeroApp() {
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
-  }, [tab, proposal]);
+  }, [tab, proposal, view]);
 
   useEffect(() => {
     let disposed = false;
@@ -70,24 +82,36 @@ export function HeroApp() {
         if (!user || disposed) return;
         const meetupQuery = query(
           collection(db, "meetups"),
-          where("userId", "==", user.uid),
+          where("participantIds", "array-contains", user.uid),
           orderBy("createdAt", "desc"),
-          limit(1),
+          limit(30),
         );
         subscriptions.push(
+          onSnapshot(doc(db, "users", user.uid), (snapshot) => {
+            const profile = snapshot.data();
+            setUserName(((profile?.preferredName ?? profile?.name) as string | undefined) ?? "");
+          }),
           onSnapshot(
             meetupQuery,
             (snapshot) => {
-              setMeetup(
-                snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Meetup).at(0) ??
-                  null,
-              );
+              setMeetups(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Meetup));
               setLoading(false);
             },
             (cause) => {
               setError(cause.message);
               setLoading(false);
             },
+          ),
+          onSnapshot(
+            query(collection(db, "availability"), where("userId", "==", user.uid)),
+            (snapshot) => {
+              setWindows(
+                snapshot.docs
+                  .map((doc) => parseFreeWindow(doc.id, doc.data()))
+                  .filter((window): window is FreeWindow => window !== null),
+              );
+            },
+            (cause) => setError(cause.message),
           ),
           onSnapshot(
             collection(db, "kakis"),
@@ -162,13 +186,17 @@ export function HeroApp() {
     setBusy(true);
     setError("");
     try {
-      const result = await apiPost<{ meetup: Meetup }>("/api/match", {
+      const result = await apiPost<{ meetup: Meetup; joined?: boolean }>("/api/match", {
         intent: proposal.intent,
         confirm: true,
       });
-      setMeetup(result.meetup);
+      setMeetups((existing) => [
+        result.meetup,
+        ...existing.filter((item) => item.id !== result.meetup.id),
+      ]);
       setProposal(null);
       setTab("home");
+      setView({ kind: "confirmed", meetup: result.meetup, joined: result.joined === true });
       return result.meetup;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not confirm the meetup.");
@@ -186,6 +214,18 @@ export function HeroApp() {
     }
   }
 
+  function openMeetup(meetupId: string) {
+    const meetup = meetups.find((item) => item.id === meetupId);
+    if (meetup) setView({ kind: "detail", meetup, joined: false });
+  }
+
+  // Keep the open meetup in step with Firestore, so a kaki joining while it is on screen
+  // shows up straight away.
+  const openView = view
+    ? { ...view, meetup: meetups.find((item) => item.id === view.meetup.id) ?? view.meetup }
+    : null;
+  const overlay = Boolean(proposal || openView);
+
   return (
     <div className="app-shell">
       {!authReady ? <main className="screen auth-loading"><Brand /><p>Opening KopiKaki…</p></main> : !signedIn ? <AccountScreen /> : proposal ? (
@@ -199,24 +239,50 @@ export function HeroApp() {
           onBack={() => setProposal(null)}
           onConfirm={confirm}
         />
+      ) : openView?.kind === "confirmed" ? (
+        <MatchFoundScreen
+          meetup={openView.meetup}
+          joined={openView.joined}
+          onView={() => setView({ ...openView, kind: "detail" })}
+          onHome={() => setView(null)}
+        />
+      ) : openView?.kind === "detail" ? (
+        <MeetupDetailScreen
+          meetup={openView.meetup}
+          currentUserName={userName}
+          onBack={() => setView(null)}
+          onCall={() => {
+            setView(null);
+            setTab("call");
+          }}
+        />
       ) : tab === "call" ? (
         <CallScreen onBack={() => setTab("home")} onTranscript={preview} />
+      ) : tab === "schedule" ? (
+        <ScheduleScreen
+          meetups={meetups}
+          windows={windows}
+          loading={loading}
+          onAdd={() => setTab("call")}
+          onOpenMeetup={openMeetup}
+        />
       ) : tab === "kakis" ? (
         <KakisScreen kakis={kakis} loading={loading} />
       ) : (
         <HomeScreen
-          meetup={meetup}
+          meetup={nextMeetup(meetups, resolveSingaporeDate("today"))}
           loading={loading}
           onCall={() => setTab("call")}
           onLogout={logout}
+          onOpenMeetup={openMeetup}
         />
       )}
-      {signedIn && error && !proposal && (
+      {signedIn && error && !overlay && (
         <p className="global-error" role="alert">
           {error}
         </p>
       )}
-      {signedIn && !proposal && <BottomNav active={tab} onChange={setTab} />}
+      {signedIn && !overlay && <BottomNav active={tab} onChange={setTab} />}
     </div>
   );
 }

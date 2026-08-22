@@ -8,6 +8,7 @@ export type UnderstoodIntent = {
 };
 
 export type CandidatePool = {
+  meetups: Candidate[];
   people: Candidate[];
   groups: Candidate[];
   activities: Candidate[];

@@ -24,16 +24,23 @@ function compatible(intent: MatchIntent, candidate: Candidate): boolean {
   return activityMatches && timeFits && languageFits;
 }
 
-export function matchCandidates(
-  intent: MatchIntent,
-  people: Candidate[],
-  groups: Candidate[],
-  activities: Candidate[],
-): MatchResult {
+export type MatchPool = {
+  meetups: Candidate[];
+  people: Candidate[];
+  groups: Candidate[];
+  activities: Candidate[];
+};
+
+// Meetups run ahead of People → Groups → Activities: an already-booked meetup is a real
+// plan with real people, so joining it beats inventing a second parallel one. The
+// non-negotiable People → Groups → Activities order below is untouched — this only adds
+// a tier in front, and never removes a fallback.
+export function matchCandidates(intent: MatchIntent, pool: MatchPool): MatchResult {
   const tiers: Array<[MatchTier, Candidate[]]> = [
-    ["people", people],
-    ["groups", groups],
-    ["activities", activities],
+    ["meetups", pool.meetups],
+    ["people", pool.people],
+    ["groups", pool.groups],
+    ["activities", pool.activities],
   ];
   const attempted: MatchTier[] = [];
 

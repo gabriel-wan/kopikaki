@@ -6,9 +6,12 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Readable by the caller who booked it and by everyone who has since joined.
     match /meetups/{meetupId} {
       allow read: if request.auth != null
-        && resource.data.userId == request.auth.uid;
+        && (resource.data.userId == request.auth.uid
+          || ('participantIds' in resource.data
+            && request.auth.uid in resource.data.participantIds));
       allow write: if false;
     }
 

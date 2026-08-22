@@ -1,5 +1,11 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { connectAuthEmulator, getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import {
+  connectAuthEmulator,
+  createUserWithEmailAndPassword,
+  getAuth,
+  signInWithEmailAndPassword,
+  updateProfile,
+} from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
 
 import {
@@ -8,6 +14,7 @@ import {
   firestoreEmulatorPort,
   useFirebaseEmulators,
 } from "./firebase-config";
+import { loginNameToEmail } from "./account";
 
 const app = getApps().length
   ? getApp()
@@ -34,19 +41,32 @@ export function connectLocalFirebase() {
   connected = true;
 }
 
-export async function signInDemoUser() {
+export async function signIn(loginName: string, password: string) {
   connectLocalFirebase();
-  if (!auth.currentUser) {
-    const email = process.env.NEXT_PUBLIC_DEMO_USER_EMAIL ?? "david@kopikaki.local";
-    const password = process.env.NEXT_PUBLIC_DEMO_USER_PASSWORD ?? "kopikaki-demo";
-    await signInWithEmailAndPassword(auth, email, password);
-  }
+  return signInWithEmailAndPassword(auth, loginNameToEmail(loginName), password);
+}
+
+export async function createAccount(loginName: string, password: string) {
+  connectLocalFirebase();
+  const normalizedName = loginName.trim().toLowerCase();
+  const credential = await createUserWithEmailAndPassword(
+    auth,
+    loginNameToEmail(normalizedName),
+    password,
+  );
+  await updateProfile(credential.user, { displayName: normalizedName });
+  await apiPost("/api/profile", { name: normalizedName, loginName: normalizedName });
+  return credential.user;
+}
+
+export async function requireSignedInUser() {
+  connectLocalFirebase();
+  if (!auth.currentUser) throw new Error("Please sign in first.");
   return auth.currentUser;
 }
 
 export async function apiPost<T>(path: string, body: object = {}): Promise<T> {
-  const user = await signInDemoUser();
-  if (!user) throw new Error("Demo sign-in failed.");
+  const user = await requireSignedInUser();
   const response = await fetch(path, {
     method: "POST",
     headers: {

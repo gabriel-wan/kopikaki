@@ -11,6 +11,7 @@
     "typecheck": "tsc --noEmit",
     "check:matcher": "tsx src/lib/matcher.test.ts",
     "check:match-pool": "tsx src/lib/match-pool.test.ts",
+    "check:account": "tsx src/lib/account.test.ts",
     "check:pwa": "tsx scripts/pwa.test.ts",
     "emulators": "firebase emulators:start --project kopikaki-local --import=.firebase-data --export-on-exit=.firebase-data",
     "seed": "tsx scripts/seed.ts"

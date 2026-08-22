@@ -11,6 +11,7 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
 
 import {
@@ -21,7 +22,8 @@ import {
   type MatchTier,
   type Meetup,
 } from "@/lib/domain";
-import { apiPost, db, signInDemoUser } from "@/lib/firebase-client";
+import { apiPost, auth, connectLocalFirebase, db } from "@/lib/firebase-client";
+import { AccountScreen } from "./account-screen";
 import { BottomNav, type Tab } from "./bottom-nav";
 import { CallScreen } from "./call-screen";
 import { HomeScreen } from "./home-screen";
@@ -44,6 +46,7 @@ export function HeroApp() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [signedIn, setSignedIn] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -53,7 +56,16 @@ export function HeroApp() {
     let disposed = false;
     const subscriptions: Unsubscribe[] = [];
 
-    void signInDemoUser()
+    connectLocalFirebase();
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setSignedIn(Boolean(user));
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError("");
+      void Promise.resolve(user)
       .then((user) => {
         if (!user || disposed) return;
         void getDoc(doc(db, "users", user.uid)).then((snapshot) => {
@@ -107,6 +119,7 @@ export function HeroApp() {
         );
         setLoading(false);
       });
+    });
 
     if ("serviceWorker" in navigator) {
       if (process.env.NODE_ENV === "production") {
@@ -131,6 +144,7 @@ export function HeroApp() {
     }
     return () => {
       disposed = true;
+      unsubscribeAuth();
       subscriptions.forEach((unsubscribe) => unsubscribe());
     };
   }, []);
@@ -173,7 +187,7 @@ export function HeroApp() {
 
   return (
     <div className="app-shell">
-      {proposal ? (
+      {!signedIn ? <AccountScreen /> : proposal ? (
         <MatchScreen
           candidate={proposal.match}
           reason={proposal.reason}

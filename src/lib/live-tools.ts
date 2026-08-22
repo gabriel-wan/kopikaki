@@ -3,8 +3,11 @@ import { Type, type ToolListUnion } from "@google/genai";
 export const PROPOSE_KAKI_MATCH = "propose_kaki_match";
 export const CONFIRM_KAKI_MATCH = "confirm_kaki_match";
 export const REMEMBER_NOTE = "remember_note";
+export const FORGET_NOTE = "forget_note";
 export const SET_AVAILABILITY = "set_availability";
 export const FIND_AVAILABILITY = "find_availability";
+export const UPDATE_PROFILE = "update_profile";
+export const MY_STATUS = "get_my_status";
 
 const dateDescription = "'today', 'tomorrow', or an exact YYYY-MM-DD date.";
 const timeDescription = "24-hour HH:mm, e.g. '15:00'.";
@@ -60,17 +63,44 @@ export const LIVE_TOOLS: ToolListUnion = [{
     },
     {
       name: FIND_AVAILABILITY,
-      description: "Call when the caller asks who else is free for an activity at a given time.",
+      description: "Call when the caller asks who else is free today — for a specific activity and time, or a vague 'who's around' with no activity or time at all. Omit whatever they didn't say; never invent a value.",
       parameters: {
         type: Type.OBJECT,
         properties: {
-          activity: { type: Type.STRING, description: "e.g. 'badminton'." },
           date: { type: Type.STRING, description: dateDescription },
-          startTime: { type: Type.STRING, description: timeDescription },
-          endTime: { type: Type.STRING, description: timeDescription },
+          activity: { type: Type.STRING, description: "e.g. 'badminton'. Omit to check any activity." },
+          startTime: { type: Type.STRING, description: timeDescription + " Omit to check the whole day." },
+          endTime: { type: Type.STRING, description: timeDescription + " Omit to check the whole day." },
         },
-        required: ["activity", "date", "startTime", "endTime"],
+        required: ["date"],
       },
+    },
+    {
+      name: FORGET_NOTE,
+      description: "Call when the caller says something you remembered about them is no longer true or should be dropped.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          text: { type: Type.STRING, description: "A short phrase describing what to forget, e.g. 'bad knees'." },
+        },
+        required: ["text"],
+      },
+    },
+    {
+      name: UPDATE_PROFILE,
+      description: "Call when the caller tells you where they live or what language they'd rather speak, so it's remembered next time.",
+      parameters: {
+        type: Type.OBJECT,
+        properties: {
+          neighborhood: { type: Type.STRING, description: "e.g. 'Bishan'." },
+          languages: { type: Type.ARRAY, items: { type: Type.STRING }, description: "e.g. ['English', 'Mandarin']." },
+        },
+      },
+    },
+    {
+      name: MY_STATUS,
+      description: "Call when the caller asks what's arranged for them, or what you remember about them.",
+      parameters: { type: Type.OBJECT, properties: {} },
     },
   ],
 }];

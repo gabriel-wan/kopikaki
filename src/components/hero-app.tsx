@@ -11,7 +11,7 @@ import {
   where,
   type Unsubscribe,
 } from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useEffect, useState } from "react";
 
 import {
@@ -24,6 +24,7 @@ import {
 } from "@/lib/domain";
 import { apiPost, auth, connectLocalFirebase, db } from "@/lib/firebase-client";
 import { AccountScreen } from "./account-screen";
+import { Brand } from "./brand";
 import { BottomNav, type Tab } from "./bottom-nav";
 import { CallScreen } from "./call-screen";
 import { HomeScreen } from "./home-screen";
@@ -47,6 +48,7 @@ export function HeroApp() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [signedIn, setSignedIn] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "instant" });
@@ -58,7 +60,9 @@ export function HeroApp() {
 
     connectLocalFirebase();
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      subscriptions.splice(0).forEach((unsubscribe) => unsubscribe());
       setSignedIn(Boolean(user));
+      setAuthReady(true);
       if (!user) {
         setLoading(false);
         return;
@@ -185,9 +189,18 @@ export function HeroApp() {
     }
   }
 
+  async function logout() {
+    setError("");
+    try {
+      await signOut(auth);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not log out. Please try again.");
+    }
+  }
+
   return (
     <div className="app-shell">
-      {!signedIn ? <AccountScreen /> : proposal ? (
+      {!authReady ? <main className="screen auth-loading"><Brand /><p>Opening KopiKaki…</p></main> : !signedIn ? <AccountScreen /> : proposal ? (
         <MatchScreen
           candidate={proposal.match}
           reason={proposal.reason}
@@ -209,14 +222,15 @@ export function HeroApp() {
           name={name}
           onCall={() => setTab("call")}
           onKakis={() => setTab("kakis")}
+          onLogout={logout}
         />
       )}
-      {error && !proposal && (
+      {signedIn && error && !proposal && (
         <p className="global-error" role="alert">
           {error}
         </p>
       )}
-      {!proposal && <BottomNav active={tab} onChange={setTab} />}
+      {signedIn && !proposal && <BottomNav active={tab} onChange={setTab} />}
     </div>
   );
 }
